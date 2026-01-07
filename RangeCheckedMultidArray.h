@@ -1,7 +1,6 @@
 #ifndef RANGECHECKED_MULTIDARRAY_H
 #define RANGECHECKED_MULTIDARRAY_H
 
-#include <iostream>
 #include <vector>
 #include <stdexcept>
 #include <string>
