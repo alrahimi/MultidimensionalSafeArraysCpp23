@@ -1,4 +1,5 @@
 #include "RangeCheckedMultidArray.h"
+#include <iostream>
 
 int main() {
     // Using the alias for a 3D grid
