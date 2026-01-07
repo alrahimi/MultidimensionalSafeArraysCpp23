@@ -1,6 +1,8 @@
 #include "RangeCheckedMultidArray.h"
 #include <iostream>
 #include <cassert>
+#include <utility>
+#include <type_traits>
 
 void test_dimension_reporting() {
     std::cout << "Testing dimension error reporting...\n";

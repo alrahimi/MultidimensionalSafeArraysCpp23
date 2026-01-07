@@ -12,93 +12,113 @@ namespace GridTools {
     // Exception class for range errors
     class RangeException : public std::out_of_range {
     public:
-        RangeException(size_t index, size_t size, int dim_level) 
+        RangeException(size_t index, size_t size, int dim_level, int total_dims) 
             : std::out_of_range("Range Error: Index [" + std::to_string(index) + 
                                 "] exceeds size (" + std::to_string(size) + 
-                                ") at Dimension Level " + std::to_string(dim_level)) {}
+                                ") at Dimension " + std::to_string(dim_level) + 
+                                " of " + std::to_string(total_dims)) {}
     };
 
-    // 1. PRIMARY TEMPLATE (Recursive/Multi-D Case)
-    // This is now the default "many-argument" version.
+    // Internal implementation with dimension tracking
+    namespace detail {
+        template <typename T, int CurrentDim, int TotalDims, size_t S, size_t... Rest>
+        class RangedArrayImpl;
+
+        // PRIMARY TEMPLATE (Recursive/Multi-D Case)
+        template <typename T, int CurrentDim, int TotalDims, size_t S, size_t... Rest>
+        class RangedArrayImpl {
+        private:
+            std::vector<RangedArrayImpl<T, CurrentDim + 1, TotalDims, Rest...>> data;
+        public:
+            RangedArrayImpl() noexcept : data(S) {}
+
+            // Move constructor
+            RangedArrayImpl(RangedArrayImpl&&) noexcept = default;
+
+            // Move assignment operator
+            RangedArrayImpl& operator=(RangedArrayImpl&&) noexcept = default;
+
+            // Copy constructor
+            RangedArrayImpl(const RangedArrayImpl&) = default;
+
+            // Copy assignment operator
+            RangedArrayImpl& operator=(const RangedArrayImpl&) = default;
+
+            void fill(const T& value) {
+                for (auto& sub : data) sub.fill(value);
+            }
+
+            RangedArrayImpl<T, CurrentDim + 1, TotalDims, Rest...>& operator[](size_t i) {
+                if (i >= S) throw RangeException(i, S, CurrentDim, TotalDims);
+                return data[i];
+            }
+
+            const RangedArrayImpl<T, CurrentDim + 1, TotalDims, Rest...>& operator[](size_t i) const {
+                if (i >= S) throw RangeException(i, S, CurrentDim, TotalDims);
+                return data[i];
+            }
+
+            constexpr size_t size() const noexcept { return S; }
+        };
+
+        // PARTIAL SPECIALIZATION (Base/1D Case)
+        template <typename T, int CurrentDim, int TotalDims, size_t S>
+        class RangedArrayImpl<T, CurrentDim, TotalDims, S> {
+        private:
+            std::vector<T> data;
+        public:
+            RangedArrayImpl() noexcept : data(S) {}
+
+            // Move constructor
+            RangedArrayImpl(RangedArrayImpl&&) noexcept = default;
+
+            // Move assignment operator
+            RangedArrayImpl& operator=(RangedArrayImpl&&) noexcept = default;
+
+            // Copy constructor
+            RangedArrayImpl(const RangedArrayImpl&) = default;
+
+            // Copy assignment operator
+            RangedArrayImpl& operator=(const RangedArrayImpl&) = default;
+
+            void fill(const T& value) {
+                std::fill(data.begin(), data.end(), value);
+            }
+
+            T& operator[](size_t i) {
+                if (i >= S) throw RangeException(i, S, CurrentDim, TotalDims);
+                return data[i];
+            }
+
+            const T& operator[](size_t i) const {
+                if (i >= S) throw RangeException(i, S, CurrentDim, TotalDims);
+                return data[i];
+            }
+
+            constexpr size_t size() const noexcept { return S; }
+        };
+    } // namespace detail
+
+    // 1. PUBLIC TEMPLATE - wraps the implementation with proper dimension tracking
     template <typename T, size_t S, size_t... Rest>
-    class RangedArray {
-    private:
-        std::vector<RangedArray<T, Rest...>> data;
+    class RangedArray : public detail::RangedArrayImpl<T, 1, sizeof...(Rest) + 1, S, Rest...> {
     public:
+        using Base = detail::RangedArrayImpl<T, 1, sizeof...(Rest) + 1, S, Rest...>;
         static constexpr int TotalDims = sizeof...(Rest) + 1;
-        // CurrentDimLevel represents the current access level (always 1 for immediate access)
-        static constexpr int CurrentDimLevel = 1;
 
-        RangedArray() noexcept : data(S) {}
-
-        // Move constructor
-        RangedArray(RangedArray&&) noexcept = default;
-
-        // Move assignment operator
-        RangedArray& operator=(RangedArray&&) noexcept = default;
-
-        // Copy constructor
-        RangedArray(const RangedArray&) = default;
-
-        // Copy assignment operator
-        RangedArray& operator=(const RangedArray&) = default;
-
-        void fill(const T& value) {
-            for (auto& sub : data) sub.fill(value);
-        }
-
-        RangedArray<T, Rest...>& operator[](size_t i) {
-            if (i >= S) throw RangeException(i, S, CurrentDimLevel);
-            return data[i];
-        }
-
-        const RangedArray<T, Rest...>& operator[](size_t i) const {
-            if (i >= S) throw RangeException(i, S, CurrentDimLevel);
-            return data[i];
-        }
-
-        constexpr size_t size() const noexcept { return S; }
+        // Inherit constructors
+        using Base::Base;
     };
 
-    // 2. PARTIAL SPECIALIZATION (Base/1D Case)
-    // This "specializes" the template for when only one size is provided.
+    // 2. PARTIAL SPECIALIZATION (Base/1D Case) - also wraps implementation
     template <typename T, size_t S>
-    class RangedArray<T, S> {
-    private:
-        std::vector<T> data;
+    class RangedArray<T, S> : public detail::RangedArrayImpl<T, 1, 1, S> {
     public:
+        using Base = detail::RangedArrayImpl<T, 1, 1, S>;
         static constexpr int TotalDims = 1;
-        static constexpr int CurrentDimLevel = 1;
 
-        RangedArray() noexcept : data(S) {}
-
-        // Move constructor
-        RangedArray(RangedArray&&) noexcept = default;
-
-        // Move assignment operator
-        RangedArray& operator=(RangedArray&&) noexcept = default;
-
-        // Copy constructor
-        RangedArray(const RangedArray&) = default;
-
-        // Copy assignment operator
-        RangedArray& operator=(const RangedArray&) = default;
-
-        void fill(const T& value) {
-            std::fill(data.begin(), data.end(), value);
-        }
-
-        T& operator[](size_t i) {
-            if (i >= S) throw RangeException(i, S, CurrentDimLevel);
-            return data[i];
-        }
-
-        const T& operator[](size_t i) const {
-            if (i >= S) throw RangeException(i, S, CurrentDimLevel);
-            return data[i];
-        }
-
-        constexpr size_t size() const noexcept { return S; }
+        // Inherit constructors
+        using Base::Base;
     };
 
     // --- Convenience Type Aliases ---
