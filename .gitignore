@@ -2,6 +2,7 @@
 *.o
 test_program
 test_improvements
+test_totaldims
 *.out
 *.exe
 

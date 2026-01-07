@@ -102,22 +102,22 @@ namespace GridTools {
     template <typename T, size_t S, size_t... Rest>
     class RangedArray : public detail::RangedArrayImpl<T, 1, sizeof...(Rest) + 1, S, Rest...> {
     public:
-        using Base = detail::RangedArrayImpl<T, 1, sizeof...(Rest) + 1, S, Rest...>;
+        // Expose total dimensions for public API
         static constexpr int TotalDims = sizeof...(Rest) + 1;
 
-        // Inherit constructors
-        using Base::Base;
+        // Inherit constructors from base implementation
+        using detail::RangedArrayImpl<T, 1, sizeof...(Rest) + 1, S, Rest...>::RangedArrayImpl;
     };
 
     // 2. PARTIAL SPECIALIZATION (Base/1D Case) - also wraps implementation
     template <typename T, size_t S>
     class RangedArray<T, S> : public detail::RangedArrayImpl<T, 1, 1, S> {
     public:
-        using Base = detail::RangedArrayImpl<T, 1, 1, S>;
+        // Expose total dimensions for public API
         static constexpr int TotalDims = 1;
 
-        // Inherit constructors
-        using Base::Base;
+        // Inherit constructors from base implementation
+        using detail::RangedArrayImpl<T, 1, 1, S>::RangedArrayImpl;
     };
 
     // --- Convenience Type Aliases ---
